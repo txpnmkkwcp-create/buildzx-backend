@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BuildZX — AI Coding Agent</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --black:   #0A0A0A;
+      --surface: #111111;
+      --line:    #1E1E1E;
+      --muted:   #3A3A3A;
+      --dim:     #888888;
+      --text:    #E8E8E8;
+      --white:   #FFFFFF;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--black);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── OVERHEAD LIGHT ───────────────────────────── */
+    .overhead-light {
+      position: fixed;
+      top: -160px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 700px;
+      height: 420px;
+      background: radial-gradient(
+        ellipse at 50% 0%,
+        rgba(255,255,255,0.055) 0%,
+        rgba(255,255,255,0.022) 30%,
+        rgba(255,255,255,0.006) 60%,
+        transparent 80%
+      );
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .overhead-light::before {
+      content: '';
+      position: absolute;
+      top: 155px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 2px;
+      height: 60px;
+      background: linear-gradient(to bottom, rgba(255,255,255,0.18), transparent);
+    }
+
+    .light-hotspot {
+      position: fixed;
+      top: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 120px;
+      height: 4px;
+      background: radial-gradient(ellipse, rgba(255,255,255,0.14) 0%, transparent 100%);
+      border-radius: 0;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── NAV ──────────────────────────────────────── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 40px;
+      height: 60px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(10,10,10,0.92);
+      backdrop-filter: blur(8px);
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .logo-mark { width: 24px; height: 24px; }
+    .logo-wordmark { font-family: 'Space Grotesk', sans-serif; font-size: 14px; font-weight: 600; letter-spacing: -0.01em; }
+    .logo-wordmark span { color: #E8E8E8; }
+
+    .nav-right { display: flex; align-items: center; gap: 32px; }
+    .nav-link { font-size: 13px; text-decoration: none; color: var(--text); transition: color 0.2s; }
+    .nav-link:hover { color: white; }
+    .btn-login { font-size: 13px; text-decoration: none; color: var(--text); transition: color 0.2s; }
+    .btn-login:hover { color: white; }
+
+    /* ── MAIN ──────────────────────────────────────── */
+    main { position: relative; z-index: 1; }
+
+    /* ── HERO ──────────────────────────────────────── */
+    .hero {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 160px 40px 100px;
+      text-align: center;
+    }
+
+    .hero-eyebrow {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--dim);
+      margin-bottom: 24px;
+    }
+
+    .hero h1 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: clamp(40px, 8vw, 64px);
+      line-height: 1.1;
+      font-weight: 700;
+      margin-bottom: 24px;
+      letter-spacing: -0.02em;
+    }
+
+    .hero h1 em {
+      font-style: normal;
+      background: linear-gradient(90deg, #E8E8E8 0%, #888888 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-sub {
+      font-size: 16px;
+      color: #B8B8B8;
+      max-width: 560px;
+      margin: 0 auto 48px;
+      line-height: 1.7;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      margin-bottom: 64px;
+      flex-wrap: wrap;
+    }
+
+    .btn-primary {
+      background: white;
+      color: var(--black);
+      border: none;
+      padding: 14px 28px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      transition: opacity 0.15s ease;
+      letter-spacing: 0.02em;
+    }
+
+    .btn-primary:hover { opacity: 0.8; }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--line);
+      padding: 14px 28px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      transition: border-color 0.15s ease, background 0.15s ease;
+    }
+
+    .btn-secondary:hover { border-color: var(--text); background: rgba(255,255,255,0.02); }
+
+    /* Terminal */
+    .terminal-wrap {
+      max-width: 700px;
+      margin: 0 auto;
+      border: 1px solid var(--line);
+      background: #0D0D0D;
+    }
+
+    .terminal-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--line);
+      background: #0A0A0A;
+    }
+
+    .t-dot { width: 8px; height: 8px; border-radius: 50%; background: #2A2A2A; }
+    .t-title { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--dim); margin-left: 6px; }
+
+    .terminal-body {
+      padding: 20px 16px;
+      font-family: 'Space Mono', monospace;
+      font-size: 12.5px;
+      line-height: 1.8;
+      color: #B8B8B8;
+    }
+
+    .t-prompt { color: #888; }
+    .t-cmd { color: #E8E8E8; }
+    .t-out { color: #4ADE80; }
+
+    @keyframes t-blink { 50% { opacity: 0; } }
+    .t-cursor { display: inline-block; width: 7px; height: 14px; background: white; animation: t-blink 1s step-end infinite; }
+
+    /* ── SECTION DIVIDER ───────────────────────────── */
+    .section-divider {
+      max-width: 1000px;
+      margin: 0 auto;
+      height: 1px;
+      background: var(--line);
+    }
+
+    /* ── SECTIONS ──────────────────────────────────── */
+    .section {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 100px 40px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .section-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--dim);
+      margin-bottom: 16px;
+    }
+
+    .section h2 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: clamp(32px, 5vw, 48px);
+      font-weight: 700;
+      margin-bottom: 48px;
+      line-height: 1.2;
+      letter-spacing: -0.01em;
+    }
+
+    /* How it works */
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 32px;
+    }
+
+    .step {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .step-n {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--dim);
+      letter-spacing: -0.02em;
+    }
+
+    .step-icon { width: 36px; height: 36px; }
+    .step h3 { font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 600; }
+    .step p { font-size: 14px; color: #B8B8B8; line-height: 1.7; }
+
+    /* Capabilities */
+    .capabilities {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 100px 40px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .cap-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 32px;
+    }
+
+    .cap-item {
+      padding: 24px;
+      border: 1px solid var(--line);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .cap-tag {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--dim);
+    }
+
+    .cap-item h3 { font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 600; }
+    .cap-item p { font-size: 13px; color: #B8B8B8; line-height: 1.7; }
+
+    /* CTA */
+    .cta-section {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 100px 40px;
+      text-align: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    .cta-section h2 { font-family: 'Space Grotesk', sans-serif; font-size: clamp(32px, 5vw, 48px); font-weight: 700; margin-bottom: 16px; }
+    .cta-section p { font-size: 16px; color: #B8B8B8; margin-bottom: 32px; line-height: 1.7; }
+
+    /* ── INTERACTIVE DEMO ─────────────────────────── */
+    .demo-section {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 100px 40px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .demo-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.3fr;
+      gap: 0;
+      border: 1px solid var(--line);
+      margin-top: 48px;
+    }
+
+    .demo-input-panel {
+      padding: 32px;
+      border-right: 1px solid var(--line);
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .demo-input-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--dim);
+    }
+
+    .demo-prompts {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .demo-prompt-btn {
+      text-align: left;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      color: var(--text);
+      padding: 14px 16px;
+      font-family: 'Inter', sans-serif;
+      font-size: 13.5px;
+      cursor: pointer;
+      transition: border-color 0.15s ease, background 0.15s ease;
+    }
+
+    .demo-prompt-btn:hover {
+      border-color: var(--muted);
+      background: #151515;
+    }
+
+    .demo-prompt-btn.active {
+      border-color: white;
+      background: #161616;
+    }
+
+    .demo-prompt-btn .dp-tag {
+      display: block;
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: var(--dim);
+      margin-bottom: 6px;
+      letter-spacing: 0.04em;
+    }
+
+    .demo-generate-btn {
+      margin-top: auto;
+      background: white;
+      color: var(--black);
+      border: none;
+      padding: 14px 20px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s ease;
+    }
+
+    .demo-generate-btn:hover { opacity: 0.85; }
+    .demo-generate-btn:disabled { opacity: 0.4; cursor: default; }
+
+    .demo-output-panel {
+      display: flex;
+      flex-direction: column;
+      min-height: 420px;
+    }
+
+    .demo-output-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--line);
+      background: #0D0D0D;
+    }
+
+    .demo-output-bar .t-dot { width: 8px; height: 8px; border-radius: 50%; background: #2A2A2A; }
+    .demo-output-title {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      color: var(--dim);
+      margin-left: 6px;
+    }
+
+    .demo-output-status {
+      margin-left: auto;
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: var(--dim);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .demo-output-status .dot-live {
+      width: 6px; height: 6px;
+      background: #4ADE80;
+      display: none;
+    }
+
+    .demo-output-status.is-live .dot-live { display: inline-block; }
+    .demo-output-status.is-live .status-text::before { content: 'Deployed'; }
+
+    .demo-code {
+      flex: 1;
+      padding: 20px 24px;
+      font-family: 'Space Mono', monospace;
+      font-size: 12.5px;
+      line-height: 1.75;
+      color: #B8B8B8;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .demo-code .placeholder {
+      color: var(--dim);
+      font-family: 'Inter', sans-serif;
+      font-size: 13.5px;
+    }
+
+    .demo-code .tok-kw { color: #C792EA; }
+    .demo-code .tok-fn { color: #82AAFF; }
+    .demo-code .tok-str { color: #C3E88D; }
+    .demo-code .tok-com { color: #5A5A5A; }
+    .demo-code .tok-tag { color: #F07178; }
+
+    .demo-code .demo-cursor {
+      display: inline-block;
+      width: 7px;
+      height: 14px;
+      background: white;
+      vertical-align: middle;
+      animation: t-blink 1s step-end infinite;
+    }
+
+    .demo-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 24px;
+      border-top: 1px solid var(--line);
+      background: #0D0D0D;
+    }
+
+    .demo-footer-link {
+      font-family: 'Space Mono', monospace;
+      font-size: 11.5px;
+      color: var(--dim);
+      text-decoration: none;
+    }
+
+    .demo-footer-link.is-active { color: #E8E8E8; }
+
+    @media (max-width: 800px) {
+      .demo-grid { grid-template-columns: 1fr; }
+      .demo-input-panel { border-right: none; border-bottom: 1px solid var(--line); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .t-cursor { animation: none; opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="overhead-light"></div>
+  <div class="light-hotspot"></div>
+
+  <nav>
+    <a href="/" class="nav-logo">
+      <div class="logo-mark">
+        <svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="1" y="1" width="26" height="26" stroke="#2A2A2A" stroke-width="1"/>
+          <line x1="7" y1="7" x2="21" y2="21" stroke="white" stroke-width="2" stroke-linecap="square"/>
+          <line x1="21" y1="7" x2="7" y2="21" stroke="white" stroke-width="2" stroke-linecap="square"/>
+          <rect x="12" y="12" width="4" height="4" fill="#0A0A0A"/>
+          <rect x="13" y="13" width="2" height="2" fill="white"/>
+        </svg>
+      </div>
+      <span class="logo-wordmark">build<span>ZX</span></span>
+    </a>
+
+    <div class="nav-right">
+      <a href="#how-it-works" class="nav-link">How it works</a>
+      <a href="/legal.html" class="nav-link">Legal</a>
+      <a href="#" class="btn-login" id="openLogin">Log in</a>
+    </div>
+  </nav>
+
+  <main>
+
+    <section class="hero">
+      <div class="hero-eyebrow">AI Coding Agent</div>
+      <h1>Describe it.<br><em>We ship it.</em></h1>
+      <p class="hero-sub">Write what you want to build in plain language. BuildZX writes the code, provisions the stack, and deploys it live — in minutes.</p>
+      <div class="hero-actions">
+        <a href="https://id-preview--a82846a7-dafe-4e5a-bb91-8e074b5abf72.lovable.app" class="btn-primary">Start building</a>
+        <a href="#demo" class="btn-secondary">See it in action</a>
+      </div>
+
+      <div class="terminal-wrap">
+        <div class="terminal-bar">
+          <div class="t-dot"></div>
+          <div class="t-dot"></div>
+          <div class="t-dot"></div>
+          <span class="t-title">buildzx — agent</span>
+        </div>
+        <div class="terminal-body">
+          <div><span class="t-prompt">› </span><span class="t-cmd">Build a SaaS dashboard with user auth, a billing page, and a usage chart.</span></div>
+          <div style="margin-top:8px;"><span class="t-out">✓ Scaffolding React + TypeScript</span></div>
+          <div><span class="t-out">✓ Auth routes configured</span></div>
+          <div><span class="t-out">✓ Stripe checkout connected</span></div>
+          <div><span class="t-out">✓ Deployed → yourapp.buildzx.app</span></div>
+          <div style="margin-top:8px;"><span class="t-prompt">› </span><span class="t-cursor"></span></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="section-divider"></div>
+
+    <!-- INTERACTIVE DEMO -->
+    <section class="demo-section" id="demo">
+      <div class="section-label">Try it</div>
+      <h2>Watch it build, right here.</h2>
+
+      <div class="demo-grid">
+        <div class="demo-input-panel">
+          <div class="demo-input-label">Pick a prompt</div>
+          <div class="demo-prompts" id="demoPrompts">
+            <button class="demo-prompt-btn active" data-demo="todo">
+              <span class="dp-tag">01 · Productivity</span>
+              A todo app with drag-to-reorder and due dates
+            </button>
+            <button class="demo-prompt-btn" data-demo="dashboard">
+              <span class="dp-tag">02 · SaaS</span>
+              An analytics dashboard with a revenue chart
+            </button>
+            <button class="demo-prompt-btn" data-demo="waitlist">
+              <span class="dp-tag">03 · Marketing</span>
+              A landing page with an email waitlist form
+            </button>
+          </div>
+          <button class="demo-generate-btn" id="demoGenerateBtn">Generate</button>
+        </div>
+
+        <div class="demo-output-panel">
+          <div class="demo-output-bar">
+            <div class="t-dot"></div>
+            <div class="t-dot"></div>
+            <div class="t-dot"></div>
+            <span class="demo-output-title" id="demoOutputTitle">app.tsx</span>
+            <span class="demo-output-status" id="demoStatus">
+              <span class="dot-live"></span>
+              <span class="status-text">Idle</span>
+            </span>
+          </div>
+          <div class="demo-code" id="demoCode"><span class="placeholder">Select a prompt and hit Generate to see BuildZX write it live.</span></div>
+          <div class="demo-footer">
+            <span class="demo-footer-link" id="demoFooterLink">yourapp.buildzx.app</span>
+            <a href="https://id-preview--a82846a7-dafe-4e5a-bb91-8e074b5abf72.lovable.app" class="demo-footer-link" style="text-decoration: underline;">Build your own →</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="section-divider"></div>
+
+    <section class="section" id="how-it-works">
+      <div class="section-label">Process</div>
+      <h2>From prompt to production.</h2>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-n">01</div>
+          <svg class="step-icon" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="2" y="8" width="32" height="20" stroke="#3A3A3A" stroke-width="1.5"/>
+            <line x1="8" y1="16" x2="22" y2="16" stroke="#888" stroke-width="1.5" stroke-linecap="square"/>
+            <line x1="8" y1="20" x2="18" y2="20" stroke="#555" stroke-width="1.5" stroke-linecap="square"/>
+            <rect x="23" y="14" width="6" height="6" fill="#2A2A2A" stroke="#555" stroke-width="1"/>
+          </svg>
+          <h3>Describe your app</h3>
+          <p>Write what you need in plain English. Feature lists, rough sketches, or a single sentence — the agent handles the ambiguity.</p>
+        </div>
+        <div class="step">
+          <div class="step-n">02</div>
+          <svg class="step-icon" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <polyline points="4,14 12,22 32,6" stroke="#888" stroke-width="1.5" stroke-linecap="square" stroke-linejoin="miter"/>
+            <line x1="4" y1="28" x2="32" y2="28" stroke="#3A3A3A" stroke-width="1" stroke-linecap="square"/>
+            <line x1="4" y1="32" x2="20" y2="32" stroke="#3A3A3A" stroke-width="1" stroke-linecap="square"/>
+          </svg>
+          <h3>Agent builds</h3>
+          <p>BuildZX plans the architecture, writes production-ready code, and wires up dependencies — no back-and-forth needed.</p>
+        </div>
+        <div class="step">
+          <div class="step-n">03</div>
+          <svg class="step-icon" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="4" y="4" width="28" height="20" stroke="#3A3A3A" stroke-width="1.5"/>
+            <line x1="18" y1="24" x2="18" y2="30" stroke="#888" stroke-width="1.5" stroke-linecap="square"/>
+            <line x1="10" y1="30" x2="26" y2="30" stroke="#888" stroke-width="1.5" stroke-linecap="square"/>
+            <circle cx="18" cy="14" r="4" stroke="#888" stroke-width="1.5"/>
+          </svg>
+          <h3>Ships live</h3>
+          <p>Your app deploys instantly to a shareable subdomain. Iterate by chatting — every change pushes a new build automatically.</p>
+        </div>
+      </div>
+    </section>
+
+    <div class="section-divider"></div>
+
+    <section class="capabilities">
+      <div class="section-label">Capabilities</div>
+      <h2>What the agent can build.</h2>
+
+      <div class="cap-grid">
+        <div class="cap-item">
+          <div class="cap-tag">Frontend</div>
+          <h3>React & TypeScript</h3>
+          <p>Component-based UIs, routing, state management, and responsive layouts — generated and connected automatically.</p>
+        </div>
+        <div class="cap-item">
+          <div class="cap-tag">Backend</div>
+          <h3>APIs & Databases</h3>
+          <p>REST endpoints, database schemas, migrations, and environment variables — provisioned and configured without manual setup.</p>
+        </div>
+        <div class="cap-item">
+          <div class="cap-tag">Auth</div>
+          <h3>Authentication</h3>
+          <p>Email/password, OAuth, and session management wired in from the start — not bolted on as an afterthought.</p>
+        </div>
+        <div class="cap-item">
+          <div class="cap-tag">Deploy</div>
+          <h3>Live on a subdomain</h3>
+          <p>Every build ships to <code style="font-family: Space Mono, monospace; font-size: 12px; color: #888;">yourapp.buildzx.app</code> — shareable immediately, custom domain available on Pro.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta-section">
+      <h2>Build your first app today.</h2>
+      <p>No setup, no configuration. Describe it and see it live in under five minutes.</p>
+      <a href="https://id-preview--a82846a7-dafe-4e5a-bb91-8e074b5abf72.lovable.app" class="btn-primary">Start building — it's free</a>
+    </section>
+
+  </main>
+
+  <div id="authModal" class="auth-modal">
+    <div class="auth-box">
+      <div class="auth-close" id="closeModal">×</div>
+      <h2 id="modalTitle">Sign in</h2>
+
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tabSignin">Sign in</button>
+        <button class="auth-tab" id="tabSignup">Create account</button>
+      </div>
+
+      <div id="panelSignin" class="auth-panel active">
+        <input type="email" placeholder="Email" />
+        <input type="password" placeholder="Password" />
+        <button class="btn-primary" onclick="handleSignin()" style="width: 100%;">Sign in</button>
+        <div style="display: flex; gap: 12px; margin-top: 16px;">
+          <button class="btn-secondary" onclick="handleGoogle()" style="flex: 1;">Google</button>
+        </div>
+      </div>
+
+      <div id="panelSignup" class="auth-panel">
+        <input type="email" placeholder="Email" />
+        <input type="password" placeholder="Password" />
+        <button class="btn-primary" onclick="handleSignup()" style="width: 100%;">Create account</button>
+      </div>
+
+      <p style="font-size: 12px; color: #888; margin-top: 16px; text-align: center;">
+        By continuing, you agree to our <a href="/legal.html" style="color: inherit;">Terms</a> and <a href="/legal.html" style="color: inherit;">Privacy</a>.
+      </p>
+    </div>
+  </div>
+
+  <style>
+    .auth-modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .auth-modal.open { display: flex; }
+
+    .auth-box {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      padding: 40px;
+      width: 100%;
+      max-width: 380px;
+      position: relative;
+    }
+
+    .auth-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      font-size: 28px;
+      color: var(--dim);
+      cursor: pointer;
+    }
+
+    .auth-box h2 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 24px;
+      margin-bottom: 24px;
+    }
+
+    .auth-tabs {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .auth-tab {
+      flex: 1;
+      background: none;
+      border: none;
+      padding: 12px 0;
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      color: var(--dim);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: color 0.2s;
+    }
+
+    .auth-tab.active {
+      color: var(--text);
+      border-bottom-color: white;
+    }
+
+    .auth-panel { display: none; }
+    .auth-panel.active { display: flex; flex-direction: column; gap: 12px; }
+
+    .auth-box input {
+      background: var(--black);
+      border: 1px solid var(--line);
+      color: var(--text);
+      padding: 12px 12px;
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+    }
+
+    .auth-box input::placeholder { color: var(--dim); }
+  </style>
+
+  <script>
+    const modal = document.getElementById('authModal');
+
+    function openModal(tab) {
+      modal.classList.add('open');
+      switchTab(tab || 'signin');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+      modal.classList.remove('open');
+      document.body.style.overflow = '';
+    }
+
+    function switchTab(tab) {
+      const isSignin = tab === 'signin';
+      document.getElementById('tabSignin').classList.toggle('active', isSignin);
+      document.getElementById('tabSignup').classList.toggle('active', !isSignin);
+      document.getElementById('panelSignin').classList.toggle('active', isSignin);
+      document.getElementById('panelSignup').classList.toggle('active', !isSignin);
+      document.getElementById('modalTitle').textContent = isSignin ? 'Sign in' : 'Create account';
+    }
+
+    document.getElementById('openLogin').addEventListener('click', e => { e.preventDefault(); openModal('signin'); });
+    document.getElementById('closeModal').addEventListener('click', closeModal);
+
+    modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && modal.classList.contains('open')) closeModal(); });
+
+    function handleGoogle() { alert('Google OAuth — connect to your auth provider.'); }
+    function handleSignin() { alert('Sign in — connect to your auth backend.'); }
+    function handleSignup() { alert('Create account — connect to your auth backend.'); }
+
+    // ── INTERACTIVE DEMO ──────────────────────────
+    const demoData = {
+      todo: {
+        file: 'TodoApp.tsx',
+        slug: 'todo-app-x7k2.buildzx.app',
+        code:
+`<span class="tok-kw">import</span> { <span class="tok-fn">useState</span> } <span class="tok-kw">from</span> <span class="tok-str">'react'</span>;
+<span class="tok-kw">import</span> { <span class="tok-fn">DndContext</span> } <span class="tok-kw">from</span> <span class="tok-str">'@dnd-kit/core'</span>;
+
+<span class="tok-com">// Todo item with drag-to-reorder + due date</span>
+<span class="tok-kw">export function</span> <span class="tok-fn">TodoApp</span>() {
+  <span class="tok-kw">const</span> [todos, setTodos] = <span class="tok-fn">useState</span>([
+    { id: <span class="tok-str">'1'</span>, text: <span class="tok-str">'Ship the landing page'</span>, due: <span class="tok-str">'Today'</span> },
+    { id: <span class="tok-str">'2'</span>, text: <span class="tok-str">'Wire up Supabase auth'</span>, due: <span class="tok-str">'Tomorrow'</span> },
+  ]);
+
+  <span class="tok-kw">const</span> <span class="tok-fn">handleReorder</span> = (event) => {
+    <span class="tok-com">// drag-end handler — reindexes list</span>
+    <span class="tok-fn">setTodos</span>(<span class="tok-fn">reorder</span>(todos, event));
+  };
+
+  <span class="tok-kw">return</span> (
+    <span class="tok-tag">&lt;DndContext</span> onDragEnd={handleReorder}<span class="tok-tag">&gt;</span>
+      <span class="tok-tag">&lt;TodoList</span> items={todos} <span class="tok-tag">/&gt;</span>
+    <span class="tok-tag">&lt;/DndContext&gt;</span>
+  );
+}`
+      },
+      dashboard: {
+        file: 'Dashboard.tsx',
+        slug: 'analytics-dash-m4p9.buildzx.app',
+        code:
+`<span class="tok-kw">import</span> { <span class="tok-fn">LineChart</span>, <span class="tok-fn">Line</span> } <span class="tok-kw">from</span> <span class="tok-str">'recharts'</span>;
+<span class="tok-kw">import</span> { <span class="tok-fn">useRevenue</span> } <span class="tok-kw">from</span> <span class="tok-str">'./hooks'</span>;
+
+<span class="tok-com">// Revenue chart, live from Stripe data</span>
+<span class="tok-kw">export function</span> <span class="tok-fn">Dashboard</span>() {
+  <span class="tok-kw">const</span> { data, loading } = <span class="tok-fn">useRevenue</span>({ range: <span class="tok-str">'30d'</span> });
+
+  <span class="tok-kw">if</span> (loading) <span class="tok-kw">return</span> <span class="tok-tag">&lt;Skeleton</span> <span class="tok-tag">/&gt;</span>;
+
+  <span class="tok-kw">return</span> (
+    <span class="tok-tag">&lt;section</span> className=<span class="tok-str">"grid gap-6"</span><span class="tok-tag">&gt;</span>
+      <span class="tok-tag">&lt;StatCard</span> label=<span class="tok-str">"MRR"</span> value={data.mrr} <span class="tok-tag">/&gt;</span>
+      <span class="tok-tag">&lt;LineChart</span> width={600} height={260} data={data.series}<span class="tok-tag">&gt;</span>
+        <span class="tok-tag">&lt;Line</span> dataKey=<span class="tok-str">"revenue"</span> stroke=<span class="tok-str">"#fff"</span> <span class="tok-tag">/&gt;</span>
+      <span class="tok-tag">&lt;/LineChart&gt;</span>
+    <span class="tok-tag">&lt;/section&gt;</span>
+  );
+}`
+      },
+      waitlist: {
+        file: 'Waitlist.tsx',
+        slug: 'launch-page-q1z8.buildzx.app',
+        code:
+`<span class="tok-kw">import</span> { <span class="tok-fn">useState</span> } <span class="tok-kw">from</span> <span class="tok-str">'react'</span>;
+<span class="tok-kw">import</span> { <span class="tok-fn">supabase</span> } <span class="tok-kw">from</span> <span class="tok-str">'./lib/supabase'</span>;
+
+<span class="tok-com">// Email capture, writes straight to Supabase</span>
+<span class="tok-kw">export function</span> <span class="tok-fn">Waitlist</span>() {
+  <span class="tok-kw">const</span> [email, setEmail] = <span class="tok-fn">useState</span>(<span class="tok-str">''</span>);
+  <span class="tok-kw">const</span> [joined, setJoined] = <span class="tok-fn">useState</span>(<span class="tok-kw">false</span>);
+
+  <span class="tok-kw">const</span> <span class="tok-fn">handleSubmit</span> = <span class="tok-kw">async</span> () => {
+    <span class="tok-kw">await</span> supabase.<span class="tok-fn">from</span>(<span class="tok-str">'waitlist'</span>).<span class="tok-fn">insert</span>({ email });
+    <span class="tok-fn">setJoined</span>(<span class="tok-kw">true</span>);
+  };
+
+  <span class="tok-kw">return</span> joined
+    ? <span class="tok-tag">&lt;p&gt;</span>You're on the list.<span class="tok-tag">&lt;/p&gt;</span>
+    : <span class="tok-tag">&lt;EmailForm</span> onSubmit={handleSubmit} <span class="tok-tag">/&gt;</span>;
+}`
+      }
+    };
+
+    let activeDemo = 'todo';
+    let isGenerating = false;
+
+    const demoPromptsEl = document.getElementById('demoPrompts');
+    const demoCodeEl = document.getElementById('demoCode');
+    const demoTitleEl = document.getElementById('demoOutputTitle');
+    const demoStatusEl = document.getElementById('demoStatus');
+    const demoFooterLinkEl = document.getElementById('demoFooterLink');
+    const demoGenerateBtn = document.getElementById('demoGenerateBtn');
+
+    demoPromptsEl.addEventListener('click', (e) => {
+      const btn = e.target.closest('.demo-prompt-btn');
+      if (!btn || isGenerating) return;
+      document.querySelectorAll('.demo-prompt-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeDemo = btn.dataset.demo;
+      demoTitleEl.textContent = demoData[activeDemo].file;
+      demoStatusEl.classList.remove('is-live');
+      demoStatusEl.querySelector('.status-text').textContent = 'Idle';
+      demoCodeEl.innerHTML = '<span class="placeholder">Hit Generate to see BuildZX write it live.</span>';
+      demoFooterLinkEl.textContent = 'yourapp.buildzx.app';
+    });
+
+    demoGenerateBtn.addEventListener('click', () => {
+      if (isGenerating) return;
+      isGenerating = true;
+      demoGenerateBtn.disabled = true;
+      demoGenerateBtn.textContent = 'Generating…';
+      demoStatusEl.classList.remove('is-live');
+      demoStatusEl.querySelector('.status-text').textContent = 'Writing code';
+
+      const entry = demoData[activeDemo];
+      const fullMarkup = entry.code;
+      demoCodeEl.innerHTML = '';
+
+      let i = 0;
+      const speed = 6;
+
+      function tick() {
+        if (i >= fullMarkup.length) {
+          demoCodeEl.innerHTML = fullMarkup;
+          isGenerating = false;
+          demoGenerateBtn.disabled = false;
+          demoGenerateBtn.textContent = 'Generate';
+          demoStatusEl.classList.add('is-live');
+          demoStatusEl.querySelector('.status-text').textContent = 'Deployed';
+          demoFooterLinkEl.textContent = entry.slug;
+          return;
+        }
+
+        let chunkEnd = i + 1;
+        if (fullMarkup[i] === '<') {
+          chunkEnd = fullMarkup.indexOf('>', i) + 1;
+        }
+
+        i = chunkEnd;
+        demoCodeEl.innerHTML = fullMarkup.slice(0, i) + '<span class="demo-cursor"></span>';
+        demoCodeEl.scrollTop = demoCodeEl.scrollHeight;
+
+        setTimeout(tick, speed);
+      }
+
+      setTimeout(tick, 200);
+    });
+  </script>
+
+</body>
+</html>
