@@ -5,12 +5,9 @@ import { createClient } from '@supabase/supabase-js';
 import axios from 'axios';
 import { nanoid } from 'nanoid';
 import { z } from 'zod';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
 dotenv.config();
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const port = parseInt(process.env.PORT || '3000', 10);
 
@@ -79,7 +76,7 @@ app.get('/health', (req: Request, res: Response) => {
 app.post('/api/auth/signup', async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
-    const { data, error } = await supabase.auth.signUpWithPassword({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password
     });
