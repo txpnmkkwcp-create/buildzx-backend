@@ -1,12 +1,12 @@
 {
   "name": "buildzx-backend",
   "version": "0.1.0",
+  "type": "commonjs",
   "description": "AI App Builder Backend",
   "main": "dist/index.js",
-  "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
+    "build": "tsc --skipLibCheck",
     "start": "node dist/index.js",
     "type-check": "tsc --noEmit"
   },
