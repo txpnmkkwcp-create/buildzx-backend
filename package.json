@@ -1,25 +1,23 @@
 {
   "name": "buildzx-backend",
-  "version": "0.2.0",
-  "type": "commonjs",
-  "description": "AI App Builder Backend",
+  "version": "1.0.0",
+  "description": "BuildZX AI app builder backend",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "build": "tsc --skipLibCheck",
+    "build": "tsc",
     "start": "node dist/index.js",
-    "type-check": "tsc --noEmit"
+    "dev": "ts-node src/index.ts"
   },
   "dependencies": {
-    "@octokit/rest": "^20.0.0",
-    "@supabase/supabase-js": "^2.43.0",
     "express": "^4.18.2",
+    "@supabase/supabase-js": "^2.38.4",
+    "@octokit/rest": "^20.0.0",
     "node-fetch": "^2.7.0"
   },
   "devDependencies": {
-    "@types/express": "^4.17.21",
-    "@types/node": "^20.10.6",
-    "typescript": "^5.3.3",
-    "tsx": "^4.7.0"
+    "typescript": "^5.0.0",
+    "@types/express": "^4.17.17",
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.1"
   }
 }
