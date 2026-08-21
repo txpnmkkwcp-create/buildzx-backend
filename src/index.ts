@@ -29,7 +29,9 @@ app.post('/api/auth/signup', async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
     const { data, error } = await supabase.auth.admin.createUser({
-      email, password, email_confirm: true
+      email,
+      password,
+      email_confirm: true,
     });
     if (error) return res.status(400).json({ error: error.message });
     res.json({ user: data.user });
@@ -41,7 +43,10 @@ app.post('/api/auth/signup', async (req: Request, res: Response) => {
 app.post('/api/auth/signin', async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
     if (error) return res.status(400).json({ error: error.message });
     res.json({ session: data.session });
   } catch (err: any) {
@@ -56,7 +61,11 @@ app.get('/api/projects', async (req: Request, res: Response) => {
     const token = authHeader.split(' ')[1];
     const { data: userData, error: userError } = await supabase.auth.getUser(token);
     if (userError || !userData.user) return res.status(401).json({ error: 'Invalid token' });
-    const { data, error } = await supabase.from('projects').select('*').eq('user_id', userData.user.id).order('created_at', { ascending: false });
+    const { data, error } = await supabase
+      .from('projects')
+      .select('*')
+      .eq('user_id', userData.user.id)
+      .order('created_at', { ascending: false });
     if (error) return res.status(500).json({ error: error.message });
     res.json({ projects: data });
   } catch (err: any) {
@@ -73,7 +82,17 @@ app.post('/api/projects', async (req: Request, res: Response) => {
     if (userError || !userData.user) return res.status(401).json({ error: 'Invalid token' });
     const { title, prompt } = req.body;
     const projectId = crypto.randomUUID();
-    const { data, error } = await supabase.from('projects').insert({ id: projectId, user_id: userData.user.id, title: title || 'Untitled Project', prompt, status: 'idle' }).select().single();
+    const { data, error } = await supabase
+      .from('projects')
+      .insert({
+        id: projectId,
+        user_id: userData.user.id,
+        title: title || 'Untitled Project',
+        prompt,
+        status: 'idle',
+      })
+      .select()
+      .single();
     if (error) return res.status(500).json({ error: error.message });
     res.json({ project: data });
   } catch (err: any) {
@@ -84,7 +103,11 @@ app.post('/api/projects', async (req: Request, res: Response) => {
 app.get('/api/projects/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { data, error } = await supabase.from('projects').select('*').eq('id', id).single();
+    const { data, error } = await supabase
+      .from('projects')
+      .select('*')
+      .eq('id', id)
+      .single();
     if (error) return res.status(404).json({ error: 'Project not found' });
     res.json({ project: data });
   } catch (err: any) {
@@ -95,7 +118,10 @@ app.get('/api/projects/:id', async (req: Request, res: Response) => {
 app.delete('/api/projects/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { error } = await supabase.from('projects').delete().eq('id', id);
+    const { error } = await supabase
+      .from('projects')
+      .delete()
+      .eq('id', id);
     if (error) return res.status(500).json({ error: error.message });
     res.json({ success: true });
   } catch (err: any) {
@@ -112,44 +138,36 @@ app.post('/api/projects/:id/generate', async (req: Request, res: Response) => {
     const token = authHeader.split(' ')[1];
     const { data: userData, error: userError } = await supabase.auth.getUser(token);
     if (userError || !userData.user) return res.status(401).json({ error: 'Invalid token' });
-
     await supabase.from('projects').update({ status: 'generating' }).eq('id', id);
-    await supabase.from('messages').insert({ project_id: id, user_id: userData.user.id, role: 'user', content: prompt });
-
-    const systemPrompt = `You are a full-stack AI developer. Generate a simple working web app based on the user's prompt.
-Return ONLY a single self-contained React component as plain JavaScript (no TypeScript, no imports).
-The component must be named App and use only React.useState / React.useEffect.
-No markdown, no explanations, just the function App() {} code.`;
-
+    await supabase.from('messages').insert({
+      project_id: id,
+      user_id: userData.user.id,
+      role: 'user',
+      content: prompt,
+    });
+    const systemPrompt = `You are a full-stack AI developer. Generate production-ready code for a web app based on the user's prompt. Return ONLY valid TypeScript/React code. No explanations, no markdown, just code. Structure: React + TypeScript component (App.tsx). Include necessary imports and exports.`;
     const claudeRes = await fetch(`${PROXY_API_BASE}/messages`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${PROX_API_KEY}` },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${PROXY_API_KEY}` },
       body: JSON.stringify({ model: 'anthropic/claude-3.5-sonnet', max_tokens: 4096, system: systemPrompt, messages: [{ role: 'user', content: prompt }] }),
     });
-
     if (!claudeRes.ok) throw new Error(`Proxy API error: ${claudeRes.statusText}`);
     const claudeData: any = await claudeRes.json();
     const generatedCode = claudeData.content?.[0]?.text || '';
     if (!generatedCode) throw new Error('No code generated');
-
     const slug = `${id.slice(0, 8)}-${Math.random().toString(36).slice(2, 7)}`;
-    const filePath = `apps/${slug}/App.js`;
+    const filePath = `apps/${slug}/App.tsx`;
     const branchName = `app-${slug}`;
-
     const mainBranch = await octokit.repos.getBranch({ owner: GITHUB_REPO_OWNER, repo: GITHUB_REPO_NAME, branch: 'main' });
     const baseSha = mainBranch.data.commit.sha;
-
     await octokit.git.createRef({ owner: GITHUB_REPO_OWNER, repo: GITHUB_REPO_NAME, ref: `refs/heads/${branchName}`, sha: baseSha });
     await octokit.repos.createOrUpdateFileContents({ owner: GITHUB_REPO_OWNER, repo: GITHUB_REPO_NAME, path: filePath, message: `feat: generate app ${slug}`, content: Buffer.from(generatedCode).toString('base64'), branch: branchName });
-
-    const pr = await octokit.pulls.create({ owner: GITHUB_REPO_OWNER, repo: GITHUB_REPO_NAME, title: `Deploy ${slug}`, body: `Generated app`, head: branchName, base: 'main' });
+    const pr = await octokit.pulls.create({ owner: GITHUB_REPO_OWNER, repo: GITHUB_REPO_NAME, title: `Deploy ${slug}`, body: `Generated app from prompt: ${prompt.slice(0, 100)}...`, head: branchName, base: 'main' });
     await octokit.pulls.merge({ owner: GITHUB_REPO_OWNER, repo: GITHUB_REPO_NAME, pull_number: pr.data.number, merge_method: 'squash' });
     await octokit.git.deleteRef({ owner: GITHUB_REPO_OWNER, repo: GITHUB_REPO_NAME, ref: `heads/${branchName}` });
-
     const liveUrl = `https://${slug}.buildzx.app`;
     await supabase.from('projects').update({ code: generatedCode, status: 'deployed', live_url: liveUrl }).eq('id', id);
     await supabase.from('messages').insert({ project_id: id, user_id: userData.user.id, role: 'assistant', content: `✓ Generated and deployed to ${liveUrl}` });
-
     res.json({ success: true, slug, liveUrl, code: generatedCode });
   } catch (err: any) {
     try {
@@ -162,7 +180,11 @@ No markdown, no explanations, just the function App() {} code.`;
 app.get('/api/projects/:id/status', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { data, error } = await supabase.from('projects').select('status, live_url').eq('id', id).single();
+    const { data, error } = await supabase
+      .from('projects')
+      .select('status, live_url')
+      .eq('id', id)
+      .single();
     if (error) return res.status(404).json({ error: 'Project not found' });
     res.json({ status: data.status, liveUrl: data.live_url });
   } catch (err: any) {
@@ -173,7 +195,11 @@ app.get('/api/projects/:id/status', async (req: Request, res: Response) => {
 app.get('/api/projects/:id/logs', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { data, error } = await supabase.from('messages').select('*').eq('project_id', id).order('created_at', { ascending: true });
+    const { data, error } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('project_id', id)
+      .order('created_at', { ascending: true });
     if (error) return res.status(500).json({ error: error.message });
     res.json({ logs: data });
   } catch (err: any) {
